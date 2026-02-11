@@ -194,7 +194,7 @@ const steps: Step[] = [
 const sdk = new HumanitySDK({
   clientId: 'your_client_id',
   redirectUri: 'https://yourapp.com/callback',
-  baseUrl: 'sandbox', // or 'production'
+  environment: 'sandbox', // or 'production'
 });`,
   },
   {

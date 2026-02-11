@@ -9,7 +9,7 @@ interface TokenSession {
   expiresAt: number;
   authorizationId: string;
   grantedScopes: string[];
-  baseUrl: string;
+  environment: string;
   clientId: string;
   redirectUri: string;
   idToken?: string;
@@ -148,7 +148,7 @@ export default function DebugPage() {
     setEnvVars({
       HUMANITY_CLIENT_ID: params.get('clientId') || process.env.NEXT_PUBLIC_HUMANITY_CLIENT_ID || undefined,
       HUMANITY_REDIRECT_URI: params.get('redirectUri') || process.env.NEXT_PUBLIC_HUMANITY_REDIRECT_URI || undefined,
-      HUMANITY_BASE_URL: params.get('baseUrl') || process.env.NEXT_PUBLIC_HUMANITY_BASE_URL || undefined,
+      HUMANITY_ENVIRONMENT: params.get('environment') || process.env.NEXT_PUBLIC_HUMANITY_ENVIRONMENT || undefined,
     });
   }, []);
 
@@ -529,9 +529,9 @@ export default function DebugPage() {
                     display: 'block',
                     marginBottom: '0.25rem',
                   }}>
-                    Base URL
+                    Environment
                   </span>
-                  <code style={{ fontSize: '0.8125rem' }}>{session.baseUrl}</code>
+                  <code style={{ fontSize: '0.8125rem' }}>{session.environment}</code>
                 </div>
               </div>
 
@@ -621,7 +621,7 @@ export default function DebugPage() {
             {[
               { key: 'HUMANITY_CLIENT_ID', required: true, description: 'OAuth client ID from Developer Console' },
               { key: 'HUMANITY_REDIRECT_URI', required: true, description: 'Must match registered redirect URI exactly' },
-              { key: 'HUMANITY_BASE_URL', required: false, description: 'API base URL (defaults to production)' },
+              { key: 'HUMANITY_ENVIRONMENT', required: false, description: 'Environment: "sandbox" or "production" (defaults to sandbox)' },
             ].map((env) => {
               const value = envVars[env.key];
               const isSet = !!value;

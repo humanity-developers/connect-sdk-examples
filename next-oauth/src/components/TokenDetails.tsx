@@ -4,7 +4,7 @@ type TokenSummary = {
   authorizationId: string;
   grantedScopes: string[];
   expiresAt: number;
-  baseUrl: string;
+  environment: string;
   idToken?: string;
 } | null;
 
@@ -92,8 +92,8 @@ export function TokenDetails({ session }: { session: TokenSummary }) {
           </dd>
         </div>
         <div className="field">
-          <dt>API base URL</dt>
-          <dd className="mono">{session.baseUrl}</dd>
+          <dt>Environment</dt>
+          <dd className="mono">{session.environment}</dd>
         </div>
         {session.idToken ? (
           <div className="field">

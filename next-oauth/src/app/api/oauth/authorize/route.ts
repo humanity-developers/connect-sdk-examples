@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 type AuthorizeBody = {
   clientId?: string;
   redirectUri?: string;
-  baseUrl?: string;
+  environment?: string;
   scopes?: string[];
 };
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const config = resolveDemoConfig({
     clientId: body.clientId,
     redirectUri: body.redirectUri,
-    baseUrl: body.baseUrl,
+    environment: body.environment,
     scopes: body.scopes,
   });
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   saveOAuthSession({
     clientId: config.clientId,
     redirectUri: config.redirectUri,
-    baseUrl: config.baseUrl,
+    environment: config.environment,
     scopes: config.scopes,
     codeVerifier,
     state,

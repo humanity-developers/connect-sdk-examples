@@ -185,7 +185,7 @@ cp .env.example .env.local
 | `HUMANITY_CLIENT_ID` | OAuth client ID from the [Developer Dashboard](https://developer.humanity.org) |
 | `HUMANITY_CLIENT_SECRET` | OAuth client secret (starts with `sk_`) |
 | `HUMANITY_REDIRECT_URI` | Must match exactly: `http://localhost:3001/callback` |
-| `HUMANITY_BASE_URL` | API base URL: `https://api.humanity.org` |
+| `HUMANITY_ENVIRONMENT` | Environment: `sandbox` or `production` |
 | `APP_JWT_SECRET` | Random 32+ character secret for your app's JWT |
 | `APP_JWT_ISSUER` | Issuer name for your JWT (e.g., `my-app`) |
 | `APP_JWT_EXPIRES_IN` | Token expiration in seconds (e.g., `3600`) |
@@ -195,7 +195,7 @@ cp .env.example .env.local
 HUMANITY_CLIENT_ID=your_client_id
 HUMANITY_CLIENT_SECRET=sk_your_client_secret
 HUMANITY_REDIRECT_URI=http://localhost:3001/callback
-HUMANITY_BASE_URL=https://api.humanity.org
+HUMANITY_ENVIRONMENT=sandbox
 
 # Your Application's JWT
 APP_JWT_SECRET=your_super_secret_jwt_key_at_least_32_chars
@@ -270,7 +270,7 @@ const sdk = new HumanitySDK({
   clientId: process.env.HUMANITY_CLIENT_ID,
   clientSecret: process.env.HUMANITY_CLIENT_SECRET,  // Required for backend
   redirectUri: process.env.HUMANITY_REDIRECT_URI,
-  baseUrl: process.env.HUMANITY_BASE_URL,
+  environment: process.env.HUMANITY_ENVIRONMENT, // "sandbox" or "production"
 });
 ```
 
@@ -422,7 +422,7 @@ const debugFetch: typeof fetch = async (input, init) => {
 const sdk = new HumanitySDK({
   clientId: config.humanity.clientId,
   redirectUri: config.humanity.redirectUri,
-  baseUrl: config.humanity.baseUrl,
+  environment: config.humanity.environment,
   fetch: debugFetch,
 });
 ```

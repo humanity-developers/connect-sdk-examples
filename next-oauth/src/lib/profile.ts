@@ -30,7 +30,7 @@ export async function fetchHumanityProfile(token: TokenSession): Promise<Humanit
   const sdk = createSdk({
     clientId: token.clientId,
     redirectUri: token.redirectUri,
-    baseUrl: token.baseUrl,
+    environment: token.environment,
   });
 
   try {

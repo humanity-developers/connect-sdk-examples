@@ -10,7 +10,7 @@ export interface HumanityConfig {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
-  baseUrl: string;
+  environment: string;
 }
 
 export interface AppJwtConfig {
@@ -52,7 +52,7 @@ export function getConfig(): AppConfig {
       clientId: requireEnv('HUMANITY_CLIENT_ID'),
       clientSecret: requireEnv('HUMANITY_CLIENT_SECRET'),
       redirectUri: requireEnv('HUMANITY_REDIRECT_URI'),
-      baseUrl: optionalEnv('HUMANITY_BASE_URL', 'https://api.humanity.org'),
+      environment: optionalEnv('HUMANITY_ENVIRONMENT', 'sandbox'),
     },
     jwt: {
       secret: requireEnv('APP_JWT_SECRET'),

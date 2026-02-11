@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     saveOAuthSession({
       clientId: config.humanity.clientId,
       redirectUri: config.humanity.redirectUri,
-      baseUrl: config.humanity.baseUrl,
+      environment: config.humanity.environment,
       scopes,
       codeVerifier: authResult.codeVerifier,
       state: state, // Use our generated state

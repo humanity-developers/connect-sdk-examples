@@ -6,7 +6,7 @@ interface EnvStatus {
   clientId: boolean;
   clientSecret: boolean;
   redirectUri: string | null;
-  baseUrl: string | null;
+  environment: string | null;
   jwtSecret: boolean;
   jwtSecretLength: number;
 }
@@ -232,11 +232,11 @@ export function DebugPanel({ envStatus }: { envStatus: EnvStatus }) {
 
             <div className="env-item">
               <div className="env-header">
-                <span className={`status-dot ${envStatus.baseUrl ? 'success' : 'error'}`}></span>
-                <span className="env-name">HUMANITY_BASE_URL</span>
+                <span className={`status-dot ${envStatus.environment ? 'success' : 'error'}`}></span>
+                <span className="env-name">HUMANITY_ENVIRONMENT</span>
               </div>
-              <span className={`env-value mono ${envStatus.baseUrl ? '' : 'missing'}`}>
-                {envStatus.baseUrl || 'NOT SET'}
+              <span className={`env-value mono ${envStatus.environment ? '' : 'missing'}`}>
+                {envStatus.environment || 'NOT SET'}
               </span>
             </div>
 
@@ -254,7 +254,7 @@ export function DebugPanel({ envStatus }: { envStatus: EnvStatus }) {
           </div>
 
           <div className="env-summary mt-3">
-            {envStatus.clientId && envStatus.clientSecret && envStatus.redirectUri && envStatus.baseUrl && envStatus.jwtSecret ? (
+            {envStatus.clientId && envStatus.clientSecret && envStatus.redirectUri && envStatus.environment && envStatus.jwtSecret ? (
               <div className="alert alert-success">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12"></polyline>

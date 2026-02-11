@@ -9,7 +9,7 @@ export default function DebugPage() {
     clientId: !!process.env.NEXT_PUBLIC_HUMANITY_CLIENT_ID,
     clientSecret: !!process.env.NEXT_PUBLIC_HUMANITY_CLIENT_SECRET,
     redirectUri: process.env.NEXT_PUBLIC_HUMANITY_REDIRECT_URI || null,
-    baseUrl: process.env.NEXT_PUBLIC_HUMANITY_BASE_URL || null,
+    environment: process.env.NEXT_PUBLIC_HUMANITY_ENVIRONMENT || null,
     jwtSecret: !!process.env.NEXT_PUBLIC_APP_JWT_SECRET,
     jwtSecretLength: process.env.NEXT_PUBLIC_APP_JWT_SECRET?.length || 0,
   };

@@ -117,14 +117,12 @@ cp .env.example .env.local
 | Variable | Description |
 |----------|-------------|
 | `HUMANITY_CLIENT_ID` | OAuth client ID from the [Developer Dashboard](https://developer.humanity.org) |
-| `HUMANITY_CLIENT_SECRET` | OAuth client secret (starts with `sk_`) |
 | `HUMANITY_REDIRECT_URI` | Must match exactly: `http://localhost:3200/api/auth/callback` |
 | `HUMANITY_ENVIRONMENT` | Environment: `sandbox` or `production` |
 
 ```env
 # Humanity Protocol OAuth
 HUMANITY_CLIENT_ID=your_client_id
-HUMANITY_CLIENT_SECRET=sk_your_client_secret
 HUMANITY_REDIRECT_URI=http://localhost:3200/api/auth/callback
 HUMANITY_ENVIRONMENT=sandbox
 ```
@@ -178,7 +176,7 @@ import { HumanitySDK } from '@humanity-org/connect-sdk';
 const sdk = new HumanitySDK({
   clientId: process.env.HUMANITY_CLIENT_ID,
   redirectUri: process.env.HUMANITY_REDIRECT_URI,
-  baseUrl: process.env.HUMANITY_ENVIRONMENT,
+  environment: process.env.HUMANITY_ENVIRONMENT, // "sandbox" or "production"
 });
 ```
 

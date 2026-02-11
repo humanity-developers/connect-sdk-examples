@@ -6,7 +6,7 @@ type Props = {
   defaults: {
     clientId: string;
     redirectUri: string;
-    baseUrl: string;
+    environment: string;
     scopes: string[];
   };
   isConnected: boolean;
@@ -15,14 +15,14 @@ type Props = {
 type AuthorizePayload = {
   clientId: string;
   redirectUri: string;
-  baseUrl: string;
+  environment: string;
   scopes: string[];
 };
 
 export function AuthorizeForm({ defaults, isConnected }: Props) {
   const [clientId, setClientId] = useState(defaults.clientId);
   const [redirectUri, setRedirectUri] = useState(defaults.redirectUri);
-  const [baseUrl, setBaseUrl] = useState(defaults.baseUrl);
+  const [environment, setEnvironment] = useState(defaults.environment);
   const [scopes, setScopes] = useState(defaults.scopes.join(" "));
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -38,7 +38,7 @@ export function AuthorizeForm({ defaults, isConnected }: Props) {
         const payload: AuthorizePayload = {
           clientId,
           redirectUri,
-          baseUrl,
+          environment,
           scopes: scopes
             .split(" ")
             .map((scope) => scope.trim())
@@ -82,12 +82,13 @@ export function AuthorizeForm({ defaults, isConnected }: Props) {
         />
       </div>
       <div className="field">
-        <label htmlFor="baseUrl">API Base URL</label>
+        <label htmlFor="environment">Environment</label>
         <input
-          id="baseUrl"
-          value={baseUrl}
-          onChange={(event) => setBaseUrl(event.target.value)}
+          id="environment"
+          value={environment}
+          onChange={(event) => setEnvironment(event.target.value)}
           required
+          placeholder="sandbox or production"
         />
       </div>
       <div className="field">

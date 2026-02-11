@@ -19,7 +19,7 @@ export function getHumanitySDK(): HumanitySDK {
     sdkInstance = new HumanitySDK({
       clientId,
       redirectUri,
-      baseUrl: environment,
+      environment,
     });
   }
 

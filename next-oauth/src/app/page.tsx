@@ -74,7 +74,7 @@ export default async function Home() {
                   authorizationId: token.authorizationId,
                   grantedScopes: token.grantedScopes,
                   expiresAt: token.expiresAt,
-                  baseUrl: token.baseUrl,
+                  environment: token.environment,
                   idToken: token.idToken,
                 }
               : null

@@ -10,7 +10,7 @@ const COOKIE_MAX_AGE = 15 * 60; // 15 minutes
 export type OAuthSession = {
   clientId: string;
   redirectUri: string;
-  baseUrl: string;
+  environment: string;
   scopes: string[];
   codeVerifier: string;
   state: string;
@@ -24,7 +24,7 @@ export type TokenSession = {
   expiresAt: number;
   authorizationId: string;
   grantedScopes: string[];
-  baseUrl: string;
+  environment: string;
   clientId: string;
   redirectUri: string;
   idToken?: string;
@@ -104,7 +104,7 @@ async function refreshAccessToken(session: TokenSession): Promise<TokenSession |
   const sdk = createSdk({
     clientId: session.clientId,
     redirectUri: session.redirectUri,
-    baseUrl: session.baseUrl,
+    environment: session.environment,
   });
   try {
     const token = await sdk.refreshAccessToken(session.refreshToken);

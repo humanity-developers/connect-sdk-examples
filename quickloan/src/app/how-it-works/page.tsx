@@ -372,13 +372,13 @@ const codeChallenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
         />
       </svg>
     ),
-    code: `import { HumanitySDK } from '@anthropic/humanity-sdk';
+    code: `import { HumanitySDK } from '@humanity-org/connect-sdk';
 
 // Initialize the SDK with your credentials
 const sdk = new HumanitySDK({
   clientId: process.env.HUMANITY_CLIENT_ID,
-  clientSecret: process.env.HUMANITY_CLIENT_SECRET,
   redirectUri: 'https://quickloan.example.com/api/auth/callback',
+  environment: 'sandbox', // or 'production'
 });
 
 // Build the authorization URL

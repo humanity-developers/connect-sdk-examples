@@ -46,7 +46,6 @@ cp .env.example .env.local
 
 ```env
 HUMANITY_CLIENT_ID=your_client_id_here
-HUMANITY_CLIENT_SECRET=your_client_secret_here
 HUMANITY_REDIRECT_URI=http://localhost:3200/api/auth/callback
 HUMANITY_ENVIRONMENT=sandbox
 MIN_NET_WORTH_FOR_LOAN=50000
@@ -79,7 +78,7 @@ import { HumanitySDK } from '@humanity-org/connect-sdk';
 const sdk = new HumanitySDK({
   clientId: process.env.HUMANITY_CLIENT_ID,
   redirectUri: process.env.HUMANITY_REDIRECT_URI,
-  environment: process.env.HUMANITY_ENVIRONMENT,
+  environment: process.env.HUMANITY_ENVIRONMENT, // "sandbox" or "production"
 });
 
 // Use predicate query to check eligibility without revealing actual values
@@ -102,7 +101,6 @@ const eligibilityResult = await sdk.evaluatePredicateQuery({
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `HUMANITY_CLIENT_ID` | Your Humanity app client ID | Required |
-| `HUMANITY_CLIENT_SECRET` | Your Humanity app client secret | Required |
 | `HUMANITY_REDIRECT_URI` | OAuth callback URL | `http://localhost:3200/api/auth/callback` |
 | `HUMANITY_ENVIRONMENT` | `sandbox` or `production` | `sandbox` |
 | `MIN_NET_WORTH_FOR_LOAN` | Minimum net worth for loan eligibility | `50000` |

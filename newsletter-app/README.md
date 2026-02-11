@@ -151,7 +151,7 @@ Create a `.env.local` file:
 | `HUMANITY_CLIENT_ID` | OAuth client ID from the [Developer Dashboard](https://developer.humanity.org) |
 | `HUMANITY_CLIENT_SECRET` | OAuth client secret (starts with `sk_`) |
 | `HUMANITY_REDIRECT_URI` | Must match exactly: `http://localhost:3100/callback` |
-| `HUMANITY_BASE_URL` | API base URL: `https://api.humanity.org` |
+| `HUMANITY_ENVIRONMENT` | Environment: `sandbox` or `production` |
 | `MONGODB_URI` | MongoDB connection string |
 | `MONGODB_DB_NAME` | Database name (e.g., `newsletter-app`) |
 | `NEWS_API_KEY` | GNews API key (free tier: https://gnews.io) |
@@ -164,7 +164,7 @@ Create a `.env.local` file:
 HUMANITY_CLIENT_ID=your_client_id
 HUMANITY_CLIENT_SECRET=sk_your_client_secret
 HUMANITY_REDIRECT_URI=http://localhost:3100/callback
-HUMANITY_BASE_URL=https://api.humanity.org
+HUMANITY_ENVIRONMENT=sandbox
 
 # MongoDB
 MONGODB_URI=mongodb://localhost:27017
@@ -261,7 +261,7 @@ const sdk = new HumanitySDK({
   clientId: process.env.HUMANITY_CLIENT_ID,
   clientSecret: process.env.HUMANITY_CLIENT_SECRET,
   redirectUri: process.env.HUMANITY_REDIRECT_URI,
-  baseUrl: process.env.HUMANITY_BASE_URL,
+  environment: process.env.HUMANITY_ENVIRONMENT, // "sandbox" or "production"
 });
 ```
 

@@ -44,7 +44,7 @@ export async function handleOauthCallback(request: NextRequest) {
         expiresAt: Date.now() + token.expiresIn * 1000,
         authorizationId: token.authorizationId,
         grantedScopes: token.grantedScopes,
-        baseUrl: session.baseUrl,
+        environment: session.environment,
         clientId: session.clientId,
         redirectUri: session.redirectUri,
         idToken: token.idToken ?? undefined,

@@ -18,7 +18,7 @@ export function getHumanitySdk(): HumanitySDK {
     clientId: config.humanity.clientId,
     redirectUri: config.humanity.redirectUri,
     clientSecret: config.humanity.clientSecret,
-    baseUrl: config.humanity.baseUrl,
+    environment: config.humanity.environment,
   };
 
   sdkInstance = new HumanitySDK(sdkConfig);
