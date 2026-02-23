@@ -1,11 +1,11 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { resolvePath } from '@/lib/paths';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { UseCaseCard, UseCaseData } from '@/components/UseCaseCard';
+import Link from 'next/link'
+import { resolvePath } from '@/lib/paths'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { UseCaseCard, UseCaseData } from '@/components/UseCaseCard'
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,9 +23,9 @@ import {
   ChevronUp,
   Zap,
   Code,
-} from 'lucide-react';
-import { useState } from 'react';
-import { CodeBlock } from '@/components/CodeBlock';
+} from 'lucide-react'
+import { useState } from 'react'
+import { CodeBlock } from '@/components/CodeBlock'
 
 // Use case definitions with code examples
 const USE_CASES: UseCaseData[] = [
@@ -404,7 +404,7 @@ curl -X POST "https://api.humanity.org/query/evaluate" \\
     }
   }'`,
   },
-];
+]
 
 // Comprehensive loyalty programs by category
 const LOYALTY_CATEGORIES = [
@@ -456,11 +456,7 @@ const LOYALTY_CATEGORIES = [
     name: 'Casinos & Resorts',
     icon: Coins,
     description: '3 casino rewards programs',
-    programs: [
-      'MGM Rewards',
-      'Caesars Rewards',
-      'Wynn Rewards',
-    ],
+    programs: ['MGM Rewards', 'Caesars Rewards', 'Wynn Rewards'],
     initialShow: 3,
   },
   {
@@ -468,20 +464,23 @@ const LOYALTY_CATEGORIES = [
     name: 'Crypto Exchanges',
     icon: Coins,
     description: '2 exchange platforms',
-    programs: [
-      'Binance',
-      'OKX',
-    ],
+    programs: ['Binance', 'OKX'],
     initialShow: 2,
   },
-];
+]
 
 // Component for expandable category
-function LoyaltyCategory({ category }: { category: typeof LOYALTY_CATEGORIES[0] }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const Icon = category.icon;
-  const visiblePrograms = isExpanded ? category.programs : category.programs.slice(0, category.initialShow);
-  const hasMore = category.programs.length > category.initialShow;
+function LoyaltyCategory({
+  category,
+}: {
+  category: (typeof LOYALTY_CATEGORIES)[0]
+}) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const Icon = category.icon
+  const visiblePrograms = isExpanded
+    ? category.programs
+    : category.programs.slice(0, category.initialShow)
+  const hasMore = category.programs.length > category.initialShow
 
   return (
     <div className="border rounded-lg p-4 bg-card">
@@ -491,7 +490,9 @@ function LoyaltyCategory({ category }: { category: typeof LOYALTY_CATEGORIES[0] 
         </div>
         <div>
           <h4 className="font-semibold text-sm">{category.name}</h4>
-          <p className="text-xs text-muted-foreground">{category.description}</p>
+          <p className="text-xs text-muted-foreground">
+            {category.description}
+          </p>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -524,12 +525,12 @@ function LoyaltyCategory({ category }: { category: typeof LOYALTY_CATEGORIES[0] 
         )}
       </div>
     </div>
-  );
+  )
 }
 
 // Component for collapsible SDK code examples
 function LoyaltyCodeExamples() {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false)
 
   return (
     <div className="mt-8 border-t border-primary/10 pt-6">
@@ -553,17 +554,21 @@ function LoyaltyCodeExamples() {
       {isExpanded && (
         <div className="mt-6 animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center gap-2 mb-4">
-            <Badge variant="outline" className="text-xs">SDK</Badge>
+            <Badge variant="outline" className="text-xs">
+              SDK
+            </Badge>
             <span className="text-sm text-muted-foreground">
               Query loyalty program memberships with the SDK
             </span>
           </div>
-          
+
           <div className="grid lg:grid-cols-2 gap-4">
             {/* Example 1: Check specific membership */}
             <div className="border rounded-lg overflow-hidden bg-background">
               <div className="px-4 py-2 border-b bg-muted/50">
-                <p className="text-sm font-medium">Check for Delta SkyMiles membership</p>
+                <p className="text-sm font-medium">
+                  Check for Delta SkyMiles membership
+                </p>
               </div>
               <CodeBlock
                 code={`// Check if user has Delta SkyMiles
@@ -591,7 +596,9 @@ if (result.passed) {
             {/* Example 2: Check ANY hotel membership */}
             <div className="border rounded-lg overflow-hidden bg-background">
               <div className="px-4 py-2 border-b bg-muted/50">
-                <p className="text-sm font-medium">Check for any hotel loyalty program</p>
+                <p className="text-sm font-medium">
+                  Check for any hotel loyalty program
+                </p>
               </div>
               <CodeBlock
                 code={`// Check for ANY hotel membership
@@ -619,7 +626,9 @@ const result = await sdk.evaluatePredicateQuery({
             {/* Example 3: Frequent traveler (hotel + airline) */}
             <div className="border rounded-lg overflow-hidden bg-background">
               <div className="px-4 py-2 border-b bg-muted/50">
-                <p className="text-sm font-medium">Frequent Traveler: hotel AND airline</p>
+                <p className="text-sm font-medium">
+                  Frequent Traveler: hotel AND airline
+                </p>
               </div>
               <CodeBlock
                 code={`// Frequent Traveler = Hotel AND Airline membership
@@ -683,7 +692,7 @@ if (result.passed) {
         </div>
       )}
     </div>
-  );
+  )
 }
 
 export function UseCasesContent() {
@@ -693,12 +702,15 @@ export function UseCasesContent() {
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link href={resolvePath('/')} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href={resolvePath('/')}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
               <ArrowLeft className="w-4 h-4" />
               <span className="text-sm">Back to Demo</span>
             </Link>
             <a
-              href="https://docs.humanity.org/presets"
+              href="http://docs.humanity.org/build-with-humanity/build-with-the-sdk-api/sdk-oauth-scopes-and-presets"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -732,11 +744,13 @@ export function UseCasesContent() {
               Instant access to 25+ loyalty programs
             </span>{' '}
             from airlines, hotels, and casinos.{' '}
-            <span className="text-primary font-medium">No BD calls required.</span>
+            <span className="text-primary font-medium">
+              No BD calls required.
+            </span>
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <a
-              href="https://docs.humanity.org/quickstart"
+              href="https://docs.humanity.org/build-with-humanity-protocol/build-with-the-sdk-api/sdk-quickstart"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -746,7 +760,7 @@ export function UseCasesContent() {
               </Button>
             </a>
             <a
-              href="https://docs.humanity.org/presets"
+              href="http://docs.humanity.org/build-with-humanity/build-with-the-sdk-api/sdk-oauth-scopes-and-presets"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -770,9 +784,11 @@ export function UseCasesContent() {
                 </h2>
               </div>
               <p className="text-muted-foreground max-w-xl mx-auto">
-                Access user memberships from major airlines, hotels, casinos, and exchanges 
-                via Reclaim integration.{' '}
-                <span className="text-primary font-medium">No BD calls required.</span>
+                Access user memberships from major airlines, hotels, casinos,
+                and exchanges via Reclaim integration.{' '}
+                <span className="text-primary font-medium">
+                  No BD calls required.
+                </span>
               </p>
             </div>
 
@@ -805,7 +821,7 @@ export function UseCasesContent() {
             {/* CTA */}
             <div className="mt-8 text-center">
               <a
-                href="https://docs.humanity.org/presets#loyalty-programs"
+                href="http://docs.humanity.org/build-with-humanity/build-with-the-sdk-api/sdk-oauth-scopes-and-presets"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -850,7 +866,7 @@ export function UseCasesContent() {
               </Button>
             </a>
             <a
-              href="https://github.com/humanity-org/connect-sdk/tree/main/examples"
+              href="https://github.com/humanity-developers/connect-sdk-examples"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -863,6 +879,5 @@ export function UseCasesContent() {
         </section>
       </main>
     </div>
-  );
+  )
 }
-
