@@ -1,32 +1,50 @@
-# Humanity Protocol Connect SDK Examples
+<p align="center">
+  <img src="https://cdn.humanity.org/humanity-protocol-logo-devs.png" width="576" alt="Humanity Protocol">
+</p>
 
-Official examples for integrating Humanity Protocol's identity verification into web applications.
+<h1 align="center">Humanity Protocol Connect SDK Examples</h1>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <strong>Official examples for integrating Humanity Protocol's identity verification into web applications.</strong>
+</p>
+
+<p align="center">
+  <a href="https://docs.humanity.org"><img src="https://img.shields.io/badge/docs-humanity.org-blue.svg" alt="Documentation"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"></a>
+  <a href="https://discord.gg/humanity"><img src="https://img.shields.io/badge/discord-join-7289da.svg" alt="Discord"></a>
+  
+</p>
+
+<div align="center">
+
 [![SDK Version](https://img.shields.io/badge/Connect_SDK-v0.0.3-green.svg)](https://www.npmjs.com/package/@humanity-org/connect-sdk)
 [![Node](https://img.shields.io/badge/Node-18+-purple.svg)](https://nodejs.org)
 
+</div>
+
+---
+
 ## Choose Your Example
 
-| I want to... | Example | Complexity |
-|--------------|---------|------------|
-| Learn basic OAuth 2.0 + PKCE flow | [next-oauth](./next-oauth) | ⭐ |
-| Issue my own JWTs from verified identity | [next-backend-auth](./next-backend-auth) | ⭐⭐ |
-| Build personalized experiences from presets | [newsletter-app](./newsletter-app) | ⭐⭐⭐ |
+| I want to...                                | Example                                  | Complexity |
+| ------------------------------------------- | ---------------------------------------- | ---------- |
+| Learn basic OAuth 2.0 + PKCE flow           | [next-oauth](./next-oauth)               | ⭐         |
+| Issue my own JWTs from verified identity    | [next-backend-auth](./next-backend-auth) | ⭐⭐       |
+| Build personalized experiences from presets | [newsletter-app](./newsletter-app)       | ⭐⭐⭐     |
 
 ## Quick Comparison
 
-| Feature | next-oauth | next-backend-auth | newsletter-app |
-|---------|:----------:|:-----------------:|:--------------:|
-| OAuth 2.0 + PKCE | ✓ | ✓ | ✓ |
-| Token exchange & refresh | ✓ | ✓ | ✓ |
-| ID token verification | ✓ | ✓ | ✓ |
-| Backend JWT issuance | | ✓ | ✓ |
-| Preset verification (isHuman) | | ✓ | ✓ |
-| Social account detection | | | ✓ |
-| Query Engine integration | | | ✓ |
-| Database (MongoDB) | | | ✓ |
-| Debug tools | ✓ | ✓ | ✓ |
+| Feature                       | next-oauth | next-backend-auth | newsletter-app |
+| ----------------------------- | :--------: | :---------------: | :------------: |
+| OAuth 2.0 + PKCE              |     ✓      |         ✓         |       ✓        |
+| Token exchange & refresh      |     ✓      |         ✓         |       ✓        |
+| ID token verification         |     ✓      |         ✓         |       ✓        |
+| Backend JWT issuance          |            |         ✓         |       ✓        |
+| Preset verification (isHuman) |            |         ✓         |       ✓        |
+| Social account detection      |            |                   |       ✓        |
+| Query Engine integration      |            |                   |       ✓        |
+| Database (MongoDB)            |            |                   |       ✓        |
+| Debug tools                   |     ✓      |         ✓         |       ✓        |
 
 ## Prerequisites
 
@@ -57,9 +75,9 @@ Official examples for integrating Humanity Protocol's identity verification into
 
 After creation, you'll see:
 
-| Field | Where to use | Example |
-|-------|--------------|---------|
-| Client ID | `HUMANITY_CLIENT_ID` in `.env` | `hp_abc123...` |
+| Field         | Where to use                       | Example        |
+| ------------- | ---------------------------------- | -------------- |
+| Client ID     | `HUMANITY_CLIENT_ID` in `.env`     | `hp_abc123...` |
 | Client Secret | `HUMANITY_CLIENT_SECRET` in `.env` | `sk_xyz789...` |
 
 > ⚠️ **Keep your Client Secret safe** — never commit it to git or expose it in client-side code.
@@ -84,9 +102,11 @@ For examples using preset verification (`next-backend-auth`, `newsletter-app`):
 ### Getting Help
 
 **For issues with these examples** (bugs, unclear instructions, setup problems):
+
 - [Open a GitHub Issue](https://github.com/humanity-org/connect-sdk-examples/issues)
 
 **For SDK or API questions** (integration help, feature requests):
+
 - [Humanity Protocol Discord](https://discord.gg/humanity)
 - [Developer Support](mailto:developers@humanity.org)
 
