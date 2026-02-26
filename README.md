@@ -13,6 +13,7 @@ Official examples for integrating Humanity Protocol's identity verification into
 | Learn basic OAuth 2.0 + PKCE flow | [next-oauth](./next-oauth) | ⭐ |
 | Issue my own JWTs from verified identity | [next-backend-auth](./next-backend-auth) | ⭐⭐ |
 | Build personalized experiences from presets | [newsletter-app](./newsletter-app) | ⭐⭐⭐ |
+| Already using AWS Cognito — skip the consent screen | [cognito-auth](./cognito-auth) | ⭐⭐ |
 | Already using AWS Cognito — skip the HP consent flow | [cognito-auth](./cognito-auth) | ⭐⭐ |
 
 ## Quick Comparison

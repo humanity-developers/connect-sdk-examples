@@ -1,64 +1,96 @@
-# Cognito → Humanity Protocol Integration Example
+# cognito-auth — Humanity Protocol × AWS Cognito
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
-[![SDK](https://img.shields.io/badge/@humanity--org%2Fconnect--sdk-0.1.0-green)](https://www.npmjs.com/package/@humanity-org/connect-sdk)
+[![SDK Version](https://img.shields.io/badge/Connect_SDK-v0.1.0-green.svg)](https://www.npmjs.com/package/@humanity-org/connect-sdk)
 [![Node](https://img.shields.io/badge/Node-18+-purple.svg)](https://nodejs.org)
 
-A Next.js App Router example showing how to exchange an **AWS Cognito JWT** for a
-**Humanity Protocol OAuth token** using the RFC 7523 JWT Bearer Grant —
-without requiring the user to go through the HP consent screen again.
+> **If you already use AWS Cognito, you can exchange a Cognito JWT for a Humanity
+> OAuth token with a single backend call — no second consent screen needed.**
+
+This example shows how to integrate Humanity Protocol identity verification into an
+application that already authenticates users with AWS Cognito using the
+**RFC 7523 JWT Bearer Grant**.
 
 ---
 
-## The Problem This Solves
+## The Integration Pattern
 
-If your app already uses AWS Cognito for authentication, adding Humanity Protocol
-verification normally means:
+```
+User authenticates    Frontend sends      Backend calls             HP API verifies
+  with Cognito     →  Cognito id_token → exchangeCognitoToken()  → Cognito JWKS,
+(Amplify / Hosted UI)  to your backend    on the HP SDK             resolves user,
+                                                                     issues HP token
+```
 
-1. Send the user through the full HP OAuth consent flow (redirect, login, consent screen, callback)
-2. Store the HP access token alongside the Cognito session
-3. Handle two separate token refresh cycles
+1. User logs in with Cognito (Amplify, Hosted UI, or any standard Cognito flow).
+2. Frontend sends the Cognito **id_token** to your backend.
+3. Backend calls `sdk.exchangeCognitoToken({ cognitoToken })`.
+4. The HP API:
+   - Verifies the JWT signature against your Cognito User Pool's JWKS.
+   - Resolves the HP user by Cognito `sub` (falls back to verified `email`).
+   - Checks for an active HP authorization for your `client_id`.
+   - Issues a Humanity access + refresh token pair.
+5. You use the Humanity token to verify presets, gate features, etc.
 
-The **JWT Bearer Grant** eliminates steps 1–3 for returning users. Once a user has
-consented to your app via HP once, you can obtain a fresh HP access token at any time
-using their Cognito JWT. No redirect. No consent screen.
+### Prerequisite
+
+The user must have completed the Humanity consent flow **at least once** before the
+JWT bearer grant will work. After that first consent, all subsequent sign-ins use
+this fast path — no additional HP UI interaction required.
 
 ---
 
-## Architecture
+## SDK Usage
 
+```typescript
+import { HumanitySDK } from '@humanity-org/connect-sdk';
+
+const sdk = new HumanitySDK({
+  clientId: process.env.HUMANITY_CLIENT_ID!,
+  redirectUri: process.env.HUMANITY_REDIRECT_URI!,
+  environment: 'production',
+});
+
+// AWS Amplify v6 — obtain the Cognito id_token on the frontend
+// import { fetchAuthSession } from 'aws-amplify/auth';
+// const { tokens } = await fetchAuthSession();
+// const cognitoToken = tokens?.idToken?.toString() ?? '';
+
+const humanityToken = await sdk.exchangeCognitoToken({ cognitoToken });
+
+// Use it like any other HP token
+const result = await sdk.verifyPresets({
+  accessToken: humanityToken.accessToken,
+  presets: ['isHuman', 'ageOver18'],
+});
 ```
-Browser (user is logged in via Cognito)
-   │
-   │  POST /api/auth/cognito-exchange
-   │  { cognitoToken: "<Cognito id_token>" }
-   │
-   ▼
-Your Backend (this Next.js app)
-   │
-   │  sdk.exchangeCognitoToken({ cognitoToken })
-   │  → POST https://api.humanity.org/oauth/token
-   │     { grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-   │       assertion: "<Cognito id_token>",
-   │       client_id: "<your HP client id>" }
-   │
-   ▼
-HP API Server
-   ├─ Verifies Cognito JWT against Cognito JWKS
-   ├─ Resolves HP user (by Cognito sub → verified email fallback)
-   ├─ Checks for an active HP authorization for this client_id
-   └─ Issues HP access_token + refresh_token
-   │
-   ▼
-Your Backend
-   ├─ Stores HP tokens in server-side session cookie (httpOnly)
-   └─ Returns session metadata to browser (no raw tokens)
-   │
-   ▼
-Browser
-   └─ Redirects to /dashboard
-      └─ Server component verifies HP presets using the stored access token
-```
+
+### `exchangeCognitoToken()` options
+
+| Option        | Type     | Required | Description |
+|---------------|----------|----------|-------------|
+| `cognitoToken`| `string` | ✅        | Cognito `id_token` (preferred) or `access_token`. |
+| `clientId`    | `string` | ➖        | Override the HP `client_id`. Defaults to the value passed to the SDK constructor. |
+
+The method throws `HumanityError` with:
+- `unsupported_grant_type` — Cognito integration is disabled on the HP API server (`COGNITO_ENABLED` not set).
+- `invalid_grant` — Cognito JWT is invalid/expired, or no active HP authorization exists for this user + client.
+
+---
+
+## What's in this Example
+
+| File | Purpose |
+|------|---------|
+| `src/app/page.tsx` | Landing page with flow diagram, code snippet, and demo button |
+| `src/app/dashboard/page.tsx` | Post-exchange dashboard: session info + preset verification |
+| `src/app/api/auth/cognito-exchange/route.ts` | **Core** — calls `sdk.exchangeCognitoToken()` |
+| `src/app/api/auth/session/route.ts` | Read / delete the HP session cookie |
+| `src/app/api/presets/route.ts` | Verify HP presets using the server-stored access token |
+| `src/app/api/dev/mock-cognito-token/route.ts` | Dev-only mock Cognito JWT generator |
+| `src/lib/humanity-sdk.ts` | Singleton SDK factory |
+| `src/lib/session.ts` | Server-only `httpOnly` cookie session (jose-signed) |
+| `src/lib/cognito-mock.ts` | Mock token generator for UI development (not for production) |
 
 ---
 
@@ -66,18 +98,18 @@ Browser
 
 ### Prerequisites
 
-- Node 18+ (or Bun)
-- A Humanity Protocol developer account → [developer.humanity.org](https://developer.humanity.org)
-- An AWS Cognito User Pool (for end-to-end testing)
-- The HP API server must have Cognito integration enabled (`COGNITO_ENABLED=true`)
+- Node.js 18+ or Bun
+- A [Humanity Protocol developer account](https://developer.humanity.org)
+- An AWS Cognito User Pool (for real end-to-end testing)
 
-### 1. Install dependencies
+### 1. Install
 
 ```bash
+cd cognito-auth
 npm install
 ```
 
-### 2. Configure environment
+### 2. Configure
 
 ```bash
 cp .env.example .env.local
@@ -86,186 +118,116 @@ cp .env.example .env.local
 Edit `.env.local`:
 
 ```env
-# Humanity Protocol
+# Humanity Protocol (required)
 HUMANITY_CLIENT_ID=hp_your_client_id
-HUMANITY_CLIENT_SECRET=sk_your_secret
+HUMANITY_CLIENT_SECRET=sk_your_client_secret
 HUMANITY_ENVIRONMENT=sandbox
 
-# AWS Cognito (for end-to-end testing)
-COGNITO_USER_POOL_ID=us-east-1_yourPool
+# AWS Cognito (required for end-to-end testing)
+COGNITO_USER_POOL_ID=us-east-1_yourPoolId
 COGNITO_REGION=us-east-1
 COGNITO_CLIENT_ID=your_cognito_app_client_id
 
-# Session cookie signing key
-SESSION_SECRET=your_random_32_char_secret
+# Session signing secret
+SESSION_SECRET=$(openssl rand -base64 32)
 ```
+
+> **Note:** The HP API server also needs `COGNITO_ENABLED=true`, `COGNITO_REGION`,
+> `COGNITO_USER_POOL_ID`, and optionally `COGNITO_CLIENT_ID` configured.
 
 ### 3. Run
 
 ```bash
 npm run dev
-# → http://localhost:3002
 ```
 
----
+Open [http://localhost:3002](http://localhost:3002).
 
-## Replacing the Mock with Real Cognito
+### 4. Test end-to-end
 
-The example includes a `cognito-mock.ts` that generates locally-signed tokens for UI
-exploration. Replace it with a real Cognito token source:
+To run the full exchange against the HP API:
 
-### AWS Amplify v6 (frontend)
+1. Make sure your Cognito User Pool is configured and `COGNITO_*` env vars are set.
+2. Replace the `/api/dev/mock-cognito-token` call in `src/app/page.tsx` with real Cognito auth:
 
-```ts
+```tsx
+// AWS Amplify v6
 import { fetchAuthSession } from 'aws-amplify/auth';
 
-async function getCognitoToken(): Promise<string> {
-  const { tokens } = await fetchAuthSession();
-  const idToken = tokens?.idToken?.toString();
-  if (!idToken) throw new Error('Not authenticated with Cognito');
-  return idToken;
-}
-
-// Send to your backend
-const response = await fetch('/api/auth/cognito-exchange', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ cognitoToken: await getCognitoToken() }),
-});
+const { tokens } = await fetchAuthSession();
+const cognitoToken = tokens?.idToken?.toString();
 ```
 
-### Cognito Hosted UI + PKCE (standard web flow)
-
-After the Cognito callback, the `id_token` is available in the URL fragment or
-your session. Pass it directly to `/api/auth/cognito-exchange`.
-
-### Manually (for testing with `curl`)
-
-```bash
-# 1. Get a real token via the Cognito token endpoint
-TOKEN=$(curl -s -X POST \
-  "https://your-domain.auth.us-east-1.amazoncognito.com/oauth2/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=authorization_code&client_id=xxx&code=yyy&redirect_uri=zzz" \
-  | jq -r '.id_token')
-
-# 2. Exchange for HP token
-curl -X POST http://localhost:3002/api/auth/cognito-exchange \
-  -H "Content-Type: application/json" \
-  -d "{\"cognitoToken\": \"$TOKEN\"}"
-```
+3. Ensure the user has previously completed the HP consent flow for your `client_id`.
+4. Send the real Cognito token — the exchange will succeed and return a live HP token.
 
 ---
 
-## HP Server Configuration
+## HP API Server Configuration
 
-The HP API server (`hp-dev-api`) must be started with:
+The HP API must have Cognito integration enabled:
 
-```env
-COGNITO_ENABLED=true
-COGNITO_REGION=us-east-1
-COGNITO_USER_POOL_ID=us-east-1_yourPool
-# Optional — validates the `aud` claim
-COGNITO_CLIENT_ID=your_cognito_app_client_id
-# Cache TTL for Cognito JWKS keys (default: 1 hour)
-COGNITO_JWKS_CACHE_TTL_MS=3600000
-```
-
-The server validates:
-1. JWT signature against `https://cognito-idp.{region}.amazonaws.com/{userPoolId}/.well-known/jwks.json`
-2. Issuer matches the configured pool
-3. Audience matches `COGNITO_CLIENT_ID` (if set)
-4. The HP user exists (looked up by Cognito `sub`, email fallback only if `email_verified=true`)
-5. An active HP authorization exists for this user + `client_id`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `COGNITO_ENABLED` | ✅ | Must be `"true"` to enable the JWT bearer grant. |
+| `COGNITO_REGION` | ✅ | AWS region of the User Pool (e.g. `us-east-1`). |
+| `COGNITO_USER_POOL_ID` | ✅ | User Pool ID (e.g. `us-east-1_xxxxxx`). |
+| `COGNITO_CLIENT_ID` | ➖ | If set, the API validates the JWT's `aud` claim against this value. |
+| `COGNITO_JWKS_CACHE_TTL_MS` | ➖ | How long to cache the JWKS keys (default: 3 600 000 = 1 hour). |
 
 ---
 
-## Error Reference
+## Security Notes
 
-| Error | HTTP | Description |
-|-------|------|-------------|
-| `unsupported_grant_type` | 400 | `COGNITO_ENABLED=false` on the HP server |
-| `invalid_grant` (token) | 400 | Cognito JWT is invalid, expired, or the JWKS key wasn't found |
-| `invalid_grant` (user) | 400 | No HP user found for this Cognito identity |
-| `invalid_grant` (auth) | 400 | User hasn't completed the HP consent flow for this client_id yet |
-
----
-
-## Project Structure
-
-```
-cognito-auth/
-├── .env.example
-├── package.json
-├── next.config.mjs
-├── tsconfig.json
-├── README.md
-└── src/
-    ├── app/
-    │   ├── layout.tsx
-    │   ├── globals.css
-    │   ├── page.tsx                         # Landing: enter/exchange Cognito token
-    │   ├── dashboard/
-    │   │   └── page.tsx                     # Protected: shows HP session + presets
-    │   └── api/
-    │       ├── auth/
-    │       │   ├── cognito-exchange/
-    │       │   │   └── route.ts             # POST — core token exchange endpoint
-    │       │   ├── session/
-    │       │   │   └── route.ts             # GET/DELETE — session info + logout
-    │       │   └── mock-token/
-    │       │       └── route.ts             # POST — dev-only mock Cognito JWT
-    │       └── presets/
-    │           └── route.ts                 # GET — verify HP presets (uses session)
-    ├── components/
-    │   ├── LogoutButton.tsx
-    │   └── PresetTable.tsx
-    └── lib/
-        ├── config.ts                        # Env config
-        ├── humanity-sdk.ts                  # SDK singleton
-        ├── cognito-mock.ts                  # Dev-only mock JWT generator
-        └── session.ts                       # Cookie session management
-```
+- **Never send the HP access token to the browser.** This example stores it in an
+  `httpOnly`, `secure`, `sameSite=lax` cookie signed with `jose`. The browser
+  receives only session metadata.
+- **In production**, store tokens server-side (Redis, DB) and keep only a session ID
+  in the cookie. Encrypting the full token in a cookie is fine for demos.
+- **The Cognito `sub` is the primary lookup key.** Email fallback is only used when
+  `email_verified: true` — preventing account takeover via unverified email addresses.
+- **Rate limits** apply to `POST /oauth/token` just like the standard token endpoint.
 
 ---
 
-## Key Files
+## How it differs from the standard OAuth flow
 
-| File | Purpose |
-|------|---------|
-| `src/app/api/auth/cognito-exchange/route.ts` | **The core API route** — calls `sdk.exchangeCognitoToken()` |
-| `src/lib/humanity-sdk.ts` | SDK singleton with `exchangeCognitoToken` |
-| `src/lib/session.ts` | Server-only session cookie (HP token never sent to browser) |
-| `src/app/dashboard/page.tsx` | Server component that verifies presets using the stored token |
+| | Standard OAuth (PKCE) | Cognito JWT Bearer |
+|---|---|---|
+| User sees HP consent screen | Every new session | First time only |
+| Subsequent logins | Full redirect flow | Single backend call |
+| Best for | Public-facing apps, first-time users | Apps already using Cognito |
+| Frontend involvement | Redirect + callback | Send token to your backend |
+| HP server requirement | None | `COGNITO_ENABLED=true` |
 
 ---
 
-## SDK Method
+## Troubleshooting
 
-This example uses `sdk.exchangeCognitoToken()` from `@humanity-org/connect-sdk`:
+### `unsupported_grant_type`
+The HP API server does not have `COGNITO_ENABLED=true`. Contact your deployment team.
 
-```ts
-import { HumanitySDK, type JwtBearerGrantOptions } from '@humanity-org/connect-sdk';
+### `invalid_grant` — Cognito token validation failed
+- The Cognito JWT is expired or from a different User Pool.
+- Check `COGNITO_REGION` and `COGNITO_USER_POOL_ID` match the token's issuer.
 
-const sdk = new HumanitySDK({ clientId, redirectUri, clientSecret, environment });
+### `invalid_grant` — No Humanity authorization found
+- The user has not completed the HP consent flow for this `client_id` yet.
+- Direct them through the standard HP OAuth flow first, then use the JWT bearer grant for all subsequent logins.
 
-const result = await sdk.exchangeCognitoToken({
-  cognitoToken: cognitoIdToken,
-  // clientId?: override the client_id (optional — defaults to SDK config)
-});
+### Mock tokens don't work end-to-end
+Expected — mock tokens are signed with an ephemeral key that the HP API cannot verify.
+Use a real Cognito token from a configured User Pool for end-to-end testing.
 
-// result: TokenResult
-// {
-//   accessToken: string
-//   tokenType: 'Bearer'
-//   expiresIn: number
-//   scope: string
-//   grantedScopes: string[]
-//   authorizationId: string
-//   appScopedUserId: string
-//   refreshToken?: string
-// }
-```
+---
+
+## Related Examples
+
+| Example | Description |
+|---------|-------------|
+| [next-oauth](../next-oauth) | Standard PKCE OAuth flow — start here for first-time consent |
+| [next-backend-auth](../next-backend-auth) | Backend JWT issuance after HP OAuth |
+| [newsletter-app](../newsletter-app) | Full app with presets + Query Engine |
 
 ---
 

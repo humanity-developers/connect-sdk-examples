@@ -2,272 +2,227 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Header from '@/components/Header';
 
-export default function LandingPage() {
+export default function HomePage() {
   const router = useRouter();
-  const [cognitoToken, setCognitoToken] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleExchange(tokenToUse?: string) {
-    const token = tokenToUse ?? cognitoToken.trim();
-    if (!token) {
-      setErrorMsg('Please paste a Cognito token, or click "Use Demo Token".');
-      return;
-    }
-
-    setStatus('loading');
-    setErrorMsg('');
+  /**
+   * Simulate a Cognito login + HP token exchange in one shot.
+   *
+   * In a real app, step 1 happens on the frontend with AWS Amplify or the
+   * Cognito Hosted UI, and you send the resulting id_token to your backend.
+   * Here we ask our own backend to generate a mock token so the UI flow is
+   * demonstrable without a live Cognito deployment.
+   */
+  async function handleConnect() {
+    setLoading(true);
+    setError(null);
 
     try {
-      const res = await fetch('/api/auth/cognito-exchange', {
+      // Step 1: Obtain a Cognito JWT.
+      //
+      // REAL APP — replace this block with:
+      //   import { fetchAuthSession } from 'aws-amplify/auth';
+      //   const { tokens } = await fetchAuthSession();
+      //   const cognitoToken = tokens?.idToken?.toString();
+      //
+      // This demo calls a local helper that returns a mock-signed JWT so the
+      // UI renders correctly. The HP token exchange will fail with invalid_grant
+      // unless a real Cognito JWT from a configured pool is supplied.
+      const mockRes = await fetch('/api/dev/mock-cognito-token', { method: 'POST' });
+      if (!mockRes.ok) throw new Error('Could not generate demo token');
+      const { cognitoToken } = await mockRes.json() as { cognitoToken: string };
+
+      // Step 2: Exchange the Cognito JWT for a Humanity OAuth token.
+      const exchangeRes = await fetch('/api/auth/cognito-exchange', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cognitoToken: token }),
+        body: JSON.stringify({ cognitoToken }),
       });
 
-      const data = await res.json();
+      const data = await exchangeRes.json() as {
+        ok?: boolean;
+        error?: string;
+        error_description?: string;
+      };
 
-      if (!res.ok) {
-        setStatus('error');
-        setErrorMsg(data.error_description ?? data.error ?? 'Exchange failed');
-        return;
+      if (!exchangeRes.ok) {
+        throw new Error(data.error_description ?? data.error ?? 'Token exchange failed');
       }
 
       router.push('/dashboard');
     } catch (err) {
-      setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Unexpected error');
-    }
-  }
-
-  async function handleDemoToken() {
-    // Fetch a mock token from a dedicated endpoint
-    setStatus('loading');
-    setErrorMsg('');
-    try {
-      const res = await fetch('/api/auth/mock-token', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok || !data.token) {
-        setStatus('error');
-        setErrorMsg('Failed to generate demo token');
-        return;
-      }
-      setCognitoToken(data.token);
-      await handleExchange(data.token);
-    } catch (err) {
-      setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Unexpected error');
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div>
-      <div className="container">
-        <header className="header">
-          <div className="logo">
-            <span>Humanity</span> × Cognito
-          </div>
-          <nav>
-            <a href="https://developer.humanity.org" target="_blank" rel="noreferrer">
-              Dev Portal
-            </a>
-            <a
-              href="https://github.com/humanity-developers/connect-sdk"
-              target="_blank"
-              rel="noreferrer"
-            >
-              SDK
-            </a>
-          </nav>
-        </header>
+    <>
+      <Header />
+      <main className="container" style={{ paddingBottom: 64 }}>
+        <h1 className="page-title">Cognito → Humanity Protocol</h1>
+        <p className="page-subtitle">
+          Already using AWS Cognito? Exchange your Cognito JWT for a Humanity OAuth token
+          in a single backend call — no second consent screen required.
+        </p>
 
-        <section className="hero">
-          <h1>
-            <span className="cognito">Cognito</span> → <span className="humanity">Humanity</span>
-          </h1>
-          <p>
-            If your users are already authenticated with AWS Cognito, skip the full OAuth consent
-            flow. Exchange their Cognito JWT for a Humanity access token in one call.
-          </p>
-
-          {/* Flow diagram */}
-          <div className="flow-diagram">
-            <div className="flow-step cognito">
-              <div className="step-label">Step 1</div>
-              <div className="step-name">Cognito Login</div>
-            </div>
-            <span className="flow-arrow">→</span>
-            <div className="flow-step">
-              <div className="step-label">Step 2</div>
-              <div className="step-name">Your Backend</div>
-            </div>
-            <span className="flow-arrow">→</span>
-            <div className="flow-step humanity">
-              <div className="step-label">Step 3</div>
-              <div className="step-name">HP Token</div>
-            </div>
-            <span className="flow-arrow">→</span>
-            <div className="flow-step humanity">
-              <div className="step-label">Step 4</div>
-              <div className="step-name">Verify Presets</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Try it */}
+        {/* Flow diagram */}
         <div className="card">
-          <h2>Try it</h2>
-
-          <div className="notice notice-warning">
-            <span>⚠️</span>
-            <div>
-              <strong>Demo mode.</strong> The "Use Demo Token" button generates a mock Cognito JWT
-              for UI exploration. End-to-end exchange requires a real Cognito token and a configured
-              HP server with{' '}
-              <code>COGNITO_ENABLED=true</code>. See the README.
+          <div className="card-title">How it works</div>
+          <div className="flow">
+            <div className="flow-step">
+              <div className="flow-icon cognito">👤</div>
+              <div className="flow-label">User authenticates with Cognito</div>
+            </div>
+            <div className="flow-arrow">→</div>
+            <div className="flow-step">
+              <div className="flow-icon cognito">🔑</div>
+              <div className="flow-label">Frontend receives Cognito id_token</div>
+            </div>
+            <div className="flow-arrow">→</div>
+            <div className="flow-step">
+              <div className="flow-icon backend">⚙️</div>
+              <div className="flow-label">Backend calls <span className="inline-code">exchangeCognitoToken()</span></div>
+            </div>
+            <div className="flow-arrow">→</div>
+            <div className="flow-step">
+              <div className="flow-icon hp">✅</div>
+              <div className="flow-label">Humanity issues access token</div>
             </div>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div>
-              <div className="section-label">Paste your Cognito id_token or access_token</div>
-              <textarea
-                value={cognitoToken}
-                onChange={(e) => setCognitoToken(e.target.value)}
-                placeholder="eyJhbGciOiJSUzI1NiIsImtpZCI6Ii4uLiJ9..."
-                style={{
-                  width: '100%',
-                  height: '100px',
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  color: 'var(--text)',
-                  padding: '10px 14px',
-                  fontFamily: 'monospace',
-                  fontSize: '12px',
-                  resize: 'vertical',
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button
-                className="btn btn-humanity"
-                onClick={() => handleExchange()}
-                disabled={status === 'loading' || !cognitoToken.trim()}
-              >
-                {status === 'loading' ? '⏳ Exchanging…' : '🔄 Exchange for HP Token'}
-              </button>
-              <button
-                className="btn btn-outline"
-                onClick={handleDemoToken}
-                disabled={status === 'loading'}
-              >
-                🧪 Use Demo Token
-              </button>
-            </div>
-
-            {errorMsg && (
-              <div className="notice notice-warning">
-                <span>✗</span>
-                <div>{errorMsg}</div>
-              </div>
-            )}
-          </div>
+          <p className="muted" style={{ fontSize: 13 }}>
+            The HP API verifies the Cognito JWT against your User Pool&apos;s JWKS,
+            resolves the user by <code>sub</code> (or verified email), confirms an active
+            HP authorization, and returns a full access + refresh token pair.
+          </p>
         </div>
 
-        {/* How it works */}
+        {/* Prerequisite callout */}
+        <div className="alert alert-info">
+          <strong>Prerequisites:</strong> The user must have completed the Humanity consent flow
+          at least once, creating an active authorization for your{' '}
+          <span className="inline-code">client_id</span>. The HP API must have{' '}
+          <span className="inline-code">COGNITO_ENABLED=true</span> configured.
+        </div>
+
+        {/* SDK code snippet */}
         <div className="card">
-          <h2>How it works</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '14px' }}>
-            One API call from your backend. No redirect loop. No consent screen (user already
-            consented once).
-          </p>
-          <div className="code-block">{`// In your backend (Node.js / Next.js Route Handler)
-import { HumanitySDK } from '@humanity-org/connect-sdk';
+          <div className="card-title">The backend call</div>
+          <pre><code>{`import { HumanitySDK } from '@humanity-org/connect-sdk';
 
 const sdk = new HumanitySDK({
   clientId: process.env.HUMANITY_CLIENT_ID,
-  redirectUri: 'https://yourapp.com/callback',
-  clientSecret: process.env.HUMANITY_CLIENT_SECRET,
+  redirectUri: process.env.HUMANITY_REDIRECT_URI,
   environment: 'production',
 });
 
-// cognitoToken = the id_token from AWS Amplify / Cognito Hosted UI
+// Exchange a Cognito id_token for a Humanity access token
 const humanityToken = await sdk.exchangeCognitoToken({
-  cognitoToken,   // Cognito id_token or access_token
+  cognitoToken: cognitoIdToken, // from Amplify: tokens?.idToken?.toString()
 });
 
-// Use the Humanity access token to verify user presets
-const result = await sdk.verifyPreset({
+// Use it like any other HP token
+const result = await sdk.verifyPresets({
   accessToken: humanityToken.accessToken,
-  preset: 'isHuman',
-});
-
-console.log(result.verified); // true / false`}</div>
+  presets: ['isHuman', 'ageOver18'],
+});`}</code></pre>
         </div>
 
-        {/* Prerequisites */}
+        {/* Demo section */}
         <div className="card">
-          <h2>Prerequisites</h2>
-          <div className="grid-2">
-            <div>
-              <div className="section-label">HP API server</div>
-              <ul style={{ paddingLeft: '20px', fontSize: '14px', color: 'var(--text-muted)' }}>
-                <li>
-                  <code>COGNITO_ENABLED=true</code>
-                </li>
-                <li>
-                  <code>COGNITO_REGION</code> set
-                </li>
-                <li>
-                  <code>COGNITO_USER_POOL_ID</code> set
-                </li>
-                <li>
-                  <code>COGNITO_CLIENT_ID</code> (optional — validates <code>aud</code>)
-                </li>
-              </ul>
+          <div className="card-title">Live demo</div>
+          <div className="card-desc" style={{ marginBottom: 20 }}>
+            Click below to simulate the full flow. This demo generates a mock-signed Cognito
+            JWT locally — the HP token exchange will return <span className="inline-code">invalid_grant</span>{' '}
+            unless you configure a real Cognito User Pool and HP credentials in{' '}
+            <span className="inline-code">.env.local</span>.
+          </div>
+
+          <div className="alert alert-warning" style={{ marginBottom: 16 }}>
+            ⚠️ Demo only — mock tokens cannot pass HP&apos;s Cognito JWKS verification.
+            Configure <span className="inline-code">.env.local</span> with real credentials to
+            test end-to-end. See the <a href="#setup">setup guide</a> below.
+          </div>
+
+          {error && (
+            <div className="alert alert-error" style={{ marginBottom: 16 }}>
+              {error}
             </div>
-            <div>
-              <div className="section-label">User setup</div>
-              <ul style={{ paddingLeft: '20px', fontSize: '14px', color: 'var(--text-muted)' }}>
-                <li>User must have an HP account</li>
-                <li>
-                  User must have completed the HP consent flow <em>at least once</em> for this{' '}
-                  <code>client_id</code>
-                </li>
-                <li>The HP user email must match the Cognito verified email (or same sub)</li>
-              </ul>
+          )}
+
+          <button
+            className="btn btn-cognito"
+            onClick={handleConnect}
+            disabled={loading}
+          >
+            {loading ? '⏳ Connecting…' : '🔶 Simulate Cognito Login + HP Exchange'}
+          </button>
+        </div>
+
+        {/* Setup guide */}
+        <hr className="divider" id="setup" />
+        <h2 className="section-title">Setup guide</h2>
+
+        <div className="grid-2">
+          <div className="card">
+            <div className="card-title">1. Configure .env.local</div>
+            <pre><code>{`HUMANITY_CLIENT_ID=hp_...
+HUMANITY_CLIENT_SECRET=sk_...
+HUMANITY_ENVIRONMENT=sandbox
+COGNITO_USER_POOL_ID=us-east-1_xxx
+COGNITO_REGION=us-east-1
+COGNITO_CLIENT_ID=your_app_client
+SESSION_SECRET=<openssl rand -base64 32>`}</code></pre>
+          </div>
+
+          <div className="card">
+            <div className="card-title">2. Replace the mock token</div>
+            <div className="card-desc">
+              In <span className="inline-code">src/app/page.tsx</span>, replace the{' '}
+              <span className="inline-code">/api/dev/mock-cognito-token</span> call with
+              your real Cognito authentication:
             </div>
+            <pre><code>{`// AWS Amplify v6
+import { fetchAuthSession } from 'aws-amplify/auth';
+
+const { tokens } = await fetchAuthSession();
+const cognitoToken = tokens?.idToken?.toString();`}</code></pre>
+          </div>
+
+          <div className="card">
+            <div className="card-title">3. Complete the HP consent flow</div>
+            <div className="card-desc">
+              The first time, users must consent through the standard Humanity
+              OAuth flow. After that, all subsequent logins use the JWT bearer
+              grant — no second consent screen.
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">4. Enable on HP API server</div>
+            <div className="card-desc">
+              The Humanity API server must be configured with:
+            </div>
+            <pre><code>{`COGNITO_ENABLED=true
+COGNITO_REGION=us-east-1
+COGNITO_USER_POOL_ID=us-east-1_xxx
+COGNITO_CLIENT_ID=...        # optional audience check
+COGNITO_JWKS_CACHE_TTL_MS=3600000`}</code></pre>
           </div>
         </div>
 
-        <footer
-          style={{
-            borderTop: '1px solid var(--border)',
-            padding: '24px 0',
-            color: 'var(--text-muted)',
-            fontSize: '13px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '8px',
-          }}
-        >
-          <span>Humanity Protocol — Cognito Integration Example</span>
-          <span>
-            <a
-              href="https://github.com/humanity-developers/connect-sdk-examples"
-              target="_blank"
-              rel="noreferrer"
-            >
-              View on GitHub
-            </a>
-          </span>
-        </footer>
-      </div>
-    </div>
+        <hr className="divider" />
+        <p className="muted" style={{ fontSize: 13 }}>
+          See the <a href="https://docs.humanity.org">Humanity Protocol docs</a> and the{' '}
+          <a href="https://github.com/humanity-developers/connect-sdk">connect-sdk repo</a> for
+          more details on the JWT bearer grant integration.
+        </p>
+      </main>
+    </>
   );
 }

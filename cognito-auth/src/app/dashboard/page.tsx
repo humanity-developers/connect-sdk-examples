@@ -1,163 +1,252 @@
-/**
- * Dashboard page — server component.
- *
- * Reads the Humanity session from the cookie and verifies a set of presets
- * server-side. The HP access token never leaves the server.
- */
+'use client';
 
-import { redirect } from 'next/navigation';
-import { readSession } from '@/lib/session';
-import { getHumanitySdk, HumanityError } from '@/lib/humanity-sdk';
-import { LogoutButton } from '@/components/LogoutButton';
-import { PresetTable } from '@/components/PresetTable';
-import type { DeveloperPresetKey } from '@humanity-org/connect-sdk/dist/adapters/preset-registry';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Header from '@/components/Header';
 
-const PRESETS_TO_CHECK: DeveloperPresetKey[] = [
-  'isHuman',
-  'ageOver18',
-  'kycPassed',
-];
+interface Session {
+  authenticated: boolean;
+  appScopedUserId?: string;
+  authorizationId?: string;
+  grantedScopes?: string[];
+  expiresAt?: number;
+}
 
-export default async function DashboardPage() {
-  const session = await readSession();
+interface PresetResult {
+  verified: boolean;
+  preset: string;
+  status: string;
+}
+
+const PRESETS_TO_CHECK = ['isHuman', 'ageOver18', 'kycPassed'];
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [session, setSession] = useState<Session | null>(null);
+  const [presets, setPresets] = useState<Record<string, PresetResult> | null>(null);
+  const [loadingPresets, setLoadingPresets] = useState(false);
+  const [loadingLogout, setLoadingLogout] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then((r) => r.json())
+      .then((data: Session) => {
+        if (!data.authenticated) {
+          router.push('/');
+          return;
+        }
+        setSession(data);
+      })
+      .catch(() => router.push('/'));
+  }, [router]);
+
+  async function checkPresets() {
+    setLoadingPresets(true);
+    try {
+      const res = await fetch(`/api/presets?presets=${PRESETS_TO_CHECK.join(',')}`);
+      const data = await res.json() as { results?: Record<string, PresetResult> };
+      setPresets(data.results ?? null);
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingPresets(false);
+    }
+  }
+
+  async function handleLogout() {
+    setLoadingLogout(true);
+    await fetch('/api/auth/session', { method: 'DELETE' });
+    router.push('/');
+  }
 
   if (!session) {
-    redirect('/');
+    return (
+      <>
+        <Header />
+        <div className="container" style={{ paddingTop: 40, color: 'var(--hp-muted)' }}>
+          Loading session…
+        </div>
+      </>
+    );
   }
 
-  // Verify presets server-side — token never touches the browser
-  let presetResults: Record<string, { verified: boolean; status: string }> = {};
-  let presetError: string | null = null;
-
-  try {
-    const sdk = getHumanitySdk();
-    const batch = await sdk.verifyPresets({
-      accessToken: session.accessToken,
-      presets: PRESETS_TO_CHECK,
-    });
-
-    for (const result of batch.results) {
-      presetResults[result.preset] = { verified: result.verified, status: result.status };
-    }
-    for (const err of batch.errors) {
-      presetResults[err.preset] = { verified: false, status: 'error' };
-    }
-  } catch (err) {
-    if (err instanceof HumanityError) {
-      presetError = err.message;
-    } else {
-      presetError = 'Failed to verify presets';
-    }
-  }
-
-  const expiresDate = new Date(session.expiresAt * 1000);
-  const tokenAge = Math.round((session.expiresAt * 1000 - Date.now()) / 1000 / 60);
+  const expiresIn = session.expiresAt
+    ? Math.max(0, session.expiresAt - Math.floor(Date.now() / 1000))
+    : null;
 
   return (
-    <div>
-      <div className="container">
-        <header className="header">
-          <div className="logo">
-            <span>Humanity</span> × Cognito
+    <>
+      <Header />
+      <main className="container" style={{ paddingBottom: 64 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            marginBottom: 32,
+          }}
+        >
+          <div>
+            <h1 className="page-title" style={{ marginBottom: 4 }}>
+              ✅ Token exchange successful
+            </h1>
+            <p className="muted" style={{ fontSize: 14 }}>
+              Your Cognito JWT was exchanged for a Humanity OAuth access token.
+            </p>
           </div>
-          <nav>
-            <a href="/">← Back</a>
-            <LogoutButton />
-          </nav>
-        </header>
+          <button
+            className="btn btn-ghost"
+            onClick={handleLogout}
+            disabled={loadingLogout}
+            style={{ marginTop: 6 }}
+          >
+            {loadingLogout ? 'Signing out…' : 'Sign out'}
+          </button>
+        </div>
 
-        <div style={{ padding: '40px 0' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px' }}>
-            ✅ Token Exchange Successful
-          </h1>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '14px' }}>
-            Your Cognito JWT was exchanged for a Humanity Protocol access token via the JWT Bearer
-            Grant (RFC 7523).
+        {/* Token info */}
+        <div className="card">
+          <div className="card-title">Humanity session</div>
+          <table className="kv-table" style={{ marginTop: 12 }}>
+            <tbody>
+              <tr>
+                <td>App-scoped user ID</td>
+                <td className="mono">{session.appScopedUserId}</td>
+              </tr>
+              <tr>
+                <td>Authorization ID</td>
+                <td className="mono">{session.authorizationId}</td>
+              </tr>
+              <tr>
+                <td>Granted scopes</td>
+                <td>
+                  {session.grantedScopes?.map((s) => (
+                    <span
+                      key={s}
+                      className="inline-code"
+                      style={{ marginRight: 6 }}
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </td>
+              </tr>
+              <tr>
+                <td>Token expires in</td>
+                <td>
+                  {expiresIn !== null ? (
+                    <span
+                      className={`badge ${
+                        expiresIn > 600
+                          ? 'badge-success'
+                          : expiresIn > 60
+                            ? 'badge-warning'
+                            : 'badge-error'
+                      }`}
+                    >
+                      {Math.floor(expiresIn / 60)}m {expiresIn % 60}s
+                    </span>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Preset verification */}
+        <div className="card">
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16,
+            }}
+          >
+            <div className="card-title" style={{ marginBottom: 0 }}>
+              Preset verification
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={checkPresets}
+              disabled={loadingPresets}
+              style={{ fontSize: 13 }}
+            >
+              {loadingPresets ? '⏳ Checking…' : '▶ Check presets'}
+            </button>
+          </div>
+          <p className="card-desc" style={{ marginBottom: presets ? 16 : 0 }}>
+            Use the HP access token (stored server-side) to verify user credentials.
           </p>
 
-          <div className="grid-2">
-            {/* Session info */}
-            <div className="card">
-              <h2>Humanity Session</h2>
-              <div className="kv-list">
-                <div className="kv-row">
-                  <span className="kv-key">App-scoped user ID</span>
-                  <span className="kv-val">{session.appScopedUserId}</span>
-                </div>
-                <div className="kv-row">
-                  <span className="kv-key">Authorization ID</span>
-                  <span className="kv-val">{session.authorizationId}</span>
-                </div>
-                <div className="kv-row">
-                  <span className="kv-key">Token expires in</span>
-                  <span className="kv-val">{tokenAge}m ({expiresDate.toLocaleTimeString()})</span>
-                </div>
-                <div className="kv-row">
-                  <span className="kv-key">Granted scopes</span>
-                  <span className="kv-val">{session.grantedScopes.join(', ') || '—'}</span>
-                </div>
-              </div>
-            </div>
+          {presets && (
+            <table className="kv-table">
+              <tbody>
+                {Object.entries(presets).map(([key, r]) => (
+                  <tr key={key}>
+                    <td className="mono">{key}</td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          r.verified
+                            ? 'badge-success'
+                            : r.status === 'error'
+                              ? 'badge-error'
+                              : 'badge-muted'
+                        }`}
+                      >
+                        {r.verified ? '✓ verified' : r.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
 
-            {/* Grant type info */}
-            <div className="card">
-              <h2>Grant Used</h2>
-              <div style={{ marginBottom: '12px' }}>
-                <span className="badge badge-info">JWT Bearer Grant</span>
-              </div>
-              <div className="kv-list">
-                <div className="kv-row">
-                  <span className="kv-key">grant_type</span>
-                  <span className="kv-val" style={{ fontSize: '11px' }}>
-                    urn:ietf:params:oauth:grant-type:jwt-bearer
-                  </span>
-                </div>
-                <div className="kv-row">
-                  <span className="kv-key">assertion</span>
-                  <span className="kv-val">Cognito id_token (RS256)</span>
-                </div>
-                <div className="kv-row">
-                  <span className="kv-key">Verification</span>
-                  <span className="kv-val">Cognito JWKS → HP user lookup → active authorization check</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Preset verification */}
-          <div className="card">
-            <h2>Preset Verification</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-              Verified server-side using the Humanity access token. The token never reaches the
-              browser.
-            </p>
-
-            {presetError ? (
-              <div className="notice notice-warning">
-                <span>⚠️</span>
-                <div>Could not verify presets: {presetError}</div>
-              </div>
-            ) : (
-              <PresetTable results={presetResults} presets={PRESETS_TO_CHECK} />
-            )}
-          </div>
-
-          {/* Code sample */}
-          <div className="card">
-            <h2>Server-side code (this page)</h2>
-            <div className="code-block">{`// app/dashboard/page.tsx (Next.js Server Component)
-const session = await readSession(); // HP access token from cookie
-
-const batch = await sdk.verifyPresets({
-  accessToken: session.accessToken,
-  presets: ['isHuman', 'ageOver18', 'kycPassed'],
-});
-
-// batch.results: PresetCheckResult[]
-// batch.errors:  PresetErrorResult[]`}</div>
+        {/* What happened */}
+        <div className="card">
+          <div className="card-title">What just happened</div>
+          <div className="card-desc" style={{ marginTop: 8 }}>
+            <ol style={{ paddingLeft: 20, lineHeight: 2 }}>
+              <li>
+                Your frontend obtained a Cognito JWT (mocked here; use{' '}
+                <span className="inline-code">fetchAuthSession()</span> from AWS Amplify in
+                production).
+              </li>
+              <li>
+                The frontend sent the JWT to{' '}
+                <span className="inline-code">POST /api/auth/cognito-exchange</span>.
+              </li>
+              <li>
+                The backend called{' '}
+                <span className="inline-code">sdk.exchangeCognitoToken(&#123; cognitoToken &#125;)</span>,
+                which sent:
+                <pre style={{ marginTop: 8 }}><code>{`POST /oauth/token
+{
+  "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+  "assertion": "<cognito id_token>",
+  "client_id": "<your HP client_id>"
+}`}</code></pre>
+              </li>
+              <li>
+                The Humanity API verified the Cognito JWT&apos;s signature against your User
+                Pool&apos;s JWKS, resolved the user by{' '}
+                <span className="inline-code">sub</span>, found an active HP authorization,
+                and issued an access + refresh token pair.
+              </li>
+              <li>
+                The token was stored in a server-only{' '}
+                <span className="inline-code">httpOnly</span> cookie — the browser never sees
+                the raw token.
+              </li>
+            </ol>
           </div>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }
