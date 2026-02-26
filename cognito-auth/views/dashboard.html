@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Humanity × Cognito</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #f0f0f0; min-height: 100vh; padding: 24px; }
+    .header { display: flex; align-items: center; justify-content: space-between; max-width: 860px; margin: 0 auto 32px; padding-bottom: 16px; border-bottom: 1px solid #1a1a1a; }
+    h1 { font-size: 20px; font-weight: 700; }
+    .container { max-width: 860px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: #111; border: 1px solid #1a1a1a; border-radius: 10px; padding: 24px; }
+    .card h2 { font-size: 14px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    tr { border-bottom: 1px solid #1a1a1a; }
+    tr:last-child { border-bottom: none; }
+    td { padding: 8px 4px; }
+    td:first-child { color: #666; width: 160px; }
+    .mono { font-family: monospace; font-size: 12px; word-break: break-all; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-success { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .badge-scope { background: #1a1a1a; color: #888; margin-right: 4px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: background 0.15s; }
+    .btn-primary { background: #4f8ef7; color: #fff; }
+    .btn-primary:hover { background: #3a7de8; }
+    .btn-ghost { background: transparent; color: #888; border: 1px solid #2a2a2a; }
+    .btn-ghost:hover { background: #1a1a1a; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    pre { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; font-size: 12px; overflow-x: auto; margin-top: 12px; }
+    #preset-result { display: none; }
+  </style>
+</head>
+<body>
+  <script>
+    // Session data injected by the server
+    const session = __SESSION_DATA__;
+  </script>
+
+  <div class="header">
+    <h1>✅ Humanity × Cognito Dashboard</h1>
+    <a href="/auth/logout" class="btn btn-ghost">Sign out</a>
+  </div>
+
+  <div class="container">
+    <div class="grid">
+      <!-- HP Session Info -->
+      <div class="card">
+        <h2>Humanity Session</h2>
+        <table>
+          <tbody>
+            <tr>
+              <td>User ID</td>
+              <td class="mono" id="user-id">—</td>
+            </tr>
+            <tr>
+              <td>Authorization</td>
+              <td class="mono" id="auth-id">—</td>
+            </tr>
+            <tr>
+              <td>Token expires</td>
+              <td id="expires">—</td>
+            </tr>
+            <tr>
+              <td>Issued at</td>
+              <td id="issued-at" class="mono">—</td>
+            </tr>
+            <tr>
+              <td>Scopes</td>
+              <td id="scopes">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- How it works -->
+      <div class="card">
+        <h2>What happened</h2>
+        <table>
+          <tbody>
+            <tr>
+              <td>Step 1</td>
+              <td style="font-size:13px">Logged in via Cognito Hosted UI</td>
+            </tr>
+            <tr>
+              <td>Step 2</td>
+              <td style="font-size:13px">Backend called <code style="font-size:11px">sdk.exchangeCognitoToken()</code></td>
+            </tr>
+            <tr>
+              <td>Step 3</td>
+              <td style="font-size:13px">HP API verified Cognito JWT via JWKS</td>
+            </tr>
+            <tr>
+              <td>Step 4</td>
+              <td style="font-size:13px">HP issued access + refresh tokens</td>
+            </tr>
+            <tr>
+              <td>Next login</td>
+              <td style="font-size:13px;color:#22c55e">Auto-exchange — no consent screen</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- API Explorer -->
+    <div class="card">
+      <h2>Explore HP API</h2>
+      <p style="font-size:13px;color:#888;margin-bottom:16px">Use the HP access token (stored server-side) to query Humanity data.</p>
+
+      <div class="actions">
+        <button class="btn btn-primary" onclick="fetchUserInfo()">👤 GET /userinfo</button>
+        <button class="btn btn-primary" onclick="fetchPresets('isHuman')">🧬 Verify isHuman</button>
+        <button class="btn btn-primary" onclick="fetchPresets('isHuman,ageOver18')">🔢 Verify age presets</button>
+      </div>
+
+      <div id="preset-result">
+        <pre id="result-json"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Populate session data
+    document.getElementById('user-id').textContent = session.appScopedUserId || '—';
+    document.getElementById('auth-id').textContent = session.authorizationId || '—';
+    document.getElementById('issued-at').textContent = session.issuedAt || '—';
+
+    const expiresEl = document.getElementById('expires');
+    if (session.expiresIn) {
+      const mins = Math.floor(session.expiresIn / 60);
+      expiresEl.innerHTML = `<span class="badge badge-success">${mins}m</span>`;
+    }
+
+    const scopesEl = document.getElementById('scopes');
+    if (session.grantedScopes && session.grantedScopes.length) {
+      scopesEl.innerHTML = session.grantedScopes
+        .map(s => `<span class="badge badge-scope">${s}</span>`)
+        .join('');
+    }
+
+    async function fetchUserInfo() {
+      const res = await fetch('/api/userinfo');
+      const data = await res.json();
+      showResult(data);
+    }
+
+    async function fetchPresets(presets) {
+      const res = await fetch(`/api/presets?presets=${presets}`);
+      const data = await res.json();
+      showResult(data);
+    }
+
+    function showResult(data) {
+      const el = document.getElementById('preset-result');
+      document.getElementById('result-json').textContent = JSON.stringify(data, null, 2);
+      el.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
