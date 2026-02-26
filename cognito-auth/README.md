@@ -290,27 +290,34 @@ const isHuman = await fetch('https://api.humanity.org/v2/presets/humanity_user',
 
 ```
 cognito-auth/
-├── README.md                       # This guide
+├── README.md
 ├── package.json
-├── .env.example                    # Template for required env vars
-├── src/
-│   ├── index.ts                    # Express server entry point
-│   ├── config.ts                   # Load and validate env vars
-│   ├── types.ts                    # Shared TypeScript types
-│   ├── routes/
-│   │   ├── auth.ts                 # Cognito login/callback routes
-│   │   ├── consent.ts              # Humanity consent flow routes
-│   │   └── api.ts                  # Protected routes using HP tokens
-│   ├── services/
-│   │   ├── cognito.ts              # Cognito Hosted UI token operations
-│   │   ├── humanity.ts             # JWT bearer exchange + ConsentRequiredError
-│   │   └── session.ts              # Session helpers
-│   └── middleware/
-│       └── requireAuth.ts          # Ensure user has valid tokens
-└── views/
-    ├── login.html                  # Landing page with Cognito login button
-    ├── consent.html                # Prompt for HP consent (first-time only)
-    └── dashboard.html              # Show HP verification data
+├── next.config.mjs
+├── .env.example                        # Template for required env vars
+└── src/
+    ├── app/
+    │   ├── page.tsx                    # Landing / login page
+    │   ├── consent/page.tsx            # First-time consent prompt
+    │   ├── dashboard/page.tsx          # Post-exchange dashboard (client component)
+    │   └── api/
+    │       ├── auth/
+    │       │   ├── login/route.ts      # GET → redirect to Cognito Hosted UI
+    │       │   ├── callback/route.ts   # GET → exchange code, try JWT bearer
+    │       │   └── logout/route.ts     # GET → clear cookies, redirect home
+    │       ├── consent/
+    │       │   ├── start/route.ts      # GET → build HP auth URL (PKCE), redirect
+    │       │   └── callback/route.ts   # GET → exchange HP code, save tokens
+    │       └── hp/
+    │           ├── me/route.ts         # GET → session metadata
+    │           ├── userinfo/route.ts   # GET → proxy HP /userinfo
+    │           └── presets/route.ts    # GET → proxy HP /v2/presets/:name
+    ├── lib/
+    │   └── config.ts                   # Env var loader + validation
+    ├── services/
+    │   ├── cognito.ts                  # Cognito Hosted UI: login URL, code exchange
+    │   ├── humanity.ts                 # JWT bearer exchange + ConsentRequiredError
+    │   └── session.ts                  # httpOnly cookie session (jose HS256)
+    └── types.ts                        # Shared TypeScript interfaces
 ```
 
 ---
@@ -331,7 +338,7 @@ npm install
 cp .env.example .env.local
 ```
 
-Fill in `.env.example`:
+Fill in `.env.local`:
 
 ```env
 # AWS Cognito
@@ -339,12 +346,12 @@ COGNITO_REGION=us-east-1
 COGNITO_USER_POOL_ID=us-east-1_AbCdEf123
 COGNITO_CLIENT_ID=1a2b3c4d5e6f7g8h9i0j
 COGNITO_DOMAIN=myapp.auth.us-east-1.amazoncognito.com
-COGNITO_CALLBACK_URL=http://localhost:3000/auth/callback
+COGNITO_CALLBACK_URL=http://localhost:3002/api/auth/callback
 
 # Humanity Protocol
 HUMANITY_CLIENT_ID=app_9cdb0787fad6118dc18a49fc84389a46
 HUMANITY_CLIENT_SECRET=sk_6497...
-HUMANITY_REDIRECT_URI=http://localhost:3000/consent/callback
+HUMANITY_REDIRECT_URI=http://localhost:3002/api/consent/callback
 
 # Session
 SESSION_SECRET=$(openssl rand -hex 32)
@@ -352,9 +359,13 @@ SESSION_SECRET=$(openssl rand -hex 32)
 
 ### 3. Register Redirect URIs
 
-Before running, make sure these are registered on your HP application:
-- `http://localhost:3000/auth/callback` ← Cognito callback
-- `http://localhost:3000/consent/callback` ← HP consent callback
+Before running, make sure these are registered:
+
+**In your Cognito App Client settings:**
+- Callback URL: `http://localhost:3002/api/auth/callback`
+
+**On your HP application** (Developer Dashboard → Redirect URIs):
+- `http://localhost:3002/api/consent/callback`
 
 ### 4. Configure Cognito on your HP App (Step 2)
 
@@ -373,9 +384,10 @@ curl -X PUT https://api.humanity.org/v2/developer/applications/$HUMANITY_CLIENT_
 
 ```bash
 npm run dev
+# or: bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3002](http://localhost:3002).
 
 ---
 

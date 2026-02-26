@@ -30,7 +30,7 @@ export interface HumanityUserInfo {
   email_verified?: boolean;
 }
 
-/** Cognito tokens obtained after code exchange */
+/** Cognito tokens obtained after the Hosted UI code exchange */
 export interface CognitoTokens {
   id_token: string;
   access_token: string;
@@ -39,7 +39,7 @@ export interface CognitoTokens {
   token_type: string;
 }
 
-/** Decoded Cognito id_token claims */
+/** Decoded Cognito id_token claims (not signature-verified — for display only) */
 export interface CognitoClaims {
   sub: string;
   email?: string;
@@ -50,21 +50,4 @@ export interface CognitoClaims {
   exp: number;
   iat: number;
   [key: string]: unknown;
-}
-
-/** Data stored in the server-side session */
-export interface AppSession {
-  cognitoTokens?: CognitoTokens;
-  humanityTokens?: HumanityTokenResponse;
-  /** PKCE code verifier — stored between /consent/start and /consent/callback */
-  pkceCodeVerifier?: string;
-}
-
-// Augment express-session so TypeScript knows about our session shape
-declare module 'express-session' {
-  interface SessionData {
-    cognito?: CognitoTokens;
-    humanity?: HumanityTokenResponse;
-    pkceCodeVerifier?: string;
-  }
 }

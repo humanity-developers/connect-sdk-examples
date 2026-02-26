@@ -1,51 +1,113 @@
 /**
- * Session helpers — thin wrappers around express-session.
+ * Cookie-based session for Next.js App Router.
  *
- * In production, use a persistent session store (Redis, database) instead of
- * the default in-memory store, which doesn't survive restarts and doesn't scale
- * across multiple server instances.
+ * Uses three httpOnly cookies signed with jose (HS256):
+ *   hp_cognito   — Cognito tokens (id_token, access_token, expires_in)
+ *   hp_humanity  — Humanity Protocol tokens (access_token, scopes, etc.)
+ *   hp_pkce      — PKCE code verifier (short-lived; used between /consent/start
+ *                  and /consent/callback)
  *
- * Example with connect-redis:
- *   import RedisStore from 'connect-redis';
- *   import { createClient } from 'redis';
- *   const client = createClient();
- *   app.use(session({ store: new RedisStore({ client }), ... }));
+ * Tokens are signed but NOT encrypted. Do not store sensitive data beyond
+ * what's needed for the flow. In production, consider encrypting the payload
+ * or storing tokens server-side (Redis/DB) and keeping only a session ID here.
  */
 
-import type { Request } from 'express';
-import type { CognitoTokens, HumanityTokenResponse } from '../types';
+import { SignJWT, jwtVerify } from 'jose';
+import { cookies } from 'next/headers';
+import type { CognitoTokens, HumanityTokenResponse } from '@/types';
 
-export function saveCognitoTokens(req: Request, tokens: CognitoTokens): void {
-  req.session.cognito = tokens;
+const COOKIE_COGNITO = 'hp_cognito';
+const COOKIE_HUMANITY = 'hp_humanity';
+const COOKIE_PKCE = 'hp_pkce';
+
+function getKey(): Uint8Array {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error('SESSION_SECRET is not set');
+  return new TextEncoder().encode(secret);
 }
 
-export function getCognitoTokens(req: Request): CognitoTokens | undefined {
-  return req.session.cognito;
+async function sign(payload: Record<string, unknown>, expiresIn = '1h'): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(expiresIn)
+    .sign(getKey());
 }
 
-export function saveHumanityTokens(req: Request, tokens: HumanityTokenResponse): void {
-  req.session.humanity = tokens;
+async function verify<T>(token: string): Promise<T | null> {
+  try {
+    const { payload } = await jwtVerify(token, getKey());
+    return payload as T;
+  } catch {
+    return null;
+  }
 }
 
-export function getHumanityTokens(req: Request): HumanityTokenResponse | undefined {
-  return req.session.humanity;
+function cookieOptions(maxAgeSeconds: number) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: maxAgeSeconds,
+    path: '/',
+  };
 }
 
-export function savePkceCodeVerifier(req: Request, codeVerifier: string): void {
-  req.session.pkceCodeVerifier = codeVerifier;
+// ── Cognito tokens ──────────────────────────────────────────────────────────
+
+export async function saveCognitoTokens(tokens: CognitoTokens): Promise<void> {
+  const jwt = await sign({ tokens }, '2h');
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_COGNITO, jwt, cookieOptions(2 * 60 * 60));
 }
 
-export function consumePkceCodeVerifier(req: Request): string | undefined {
-  const verifier = req.session.pkceCodeVerifier;
-  delete req.session.pkceCodeVerifier;
-  return verifier;
+export async function getCognitoTokens(): Promise<CognitoTokens | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(COOKIE_COGNITO)?.value;
+  if (!raw) return null;
+  const payload = await verify<{ tokens: CognitoTokens }>(raw);
+  return payload?.tokens ?? null;
 }
 
-export function clearSession(req: Request): Promise<void> {
-  return new Promise((resolve, reject) => {
-    req.session.destroy((err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
+// ── Humanity tokens ─────────────────────────────────────────────────────────
+
+export async function saveHumanityTokens(tokens: HumanityTokenResponse): Promise<void> {
+  const ttl = tokens.expires_in || 3600;
+  const jwt = await sign({ tokens }, `${ttl}s`);
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_HUMANITY, jwt, cookieOptions(ttl));
+}
+
+export async function getHumanityTokens(): Promise<HumanityTokenResponse | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(COOKIE_HUMANITY)?.value;
+  if (!raw) return null;
+  const payload = await verify<{ tokens: HumanityTokenResponse }>(raw);
+  return payload?.tokens ?? null;
+}
+
+// ── PKCE code verifier ──────────────────────────────────────────────────────
+
+export async function savePkceVerifier(codeVerifier: string): Promise<void> {
+  const jwt = await sign({ codeVerifier }, '10m'); // short-lived — only needed during consent
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_PKCE, jwt, cookieOptions(10 * 60));
+}
+
+export async function consumePkceVerifier(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(COOKIE_PKCE)?.value;
+  if (!raw) return null;
+  cookieStore.delete(COOKIE_PKCE); // single-use
+  const payload = await verify<{ codeVerifier: string }>(raw);
+  return payload?.codeVerifier ?? null;
+}
+
+// ── Clear all ───────────────────────────────────────────────────────────────
+
+export async function clearSession(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_COGNITO);
+  cookieStore.delete(COOKIE_HUMANITY);
+  cookieStore.delete(COOKIE_PKCE);
 }

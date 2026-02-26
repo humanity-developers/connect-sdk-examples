@@ -1,31 +1,25 @@
 /**
- * CognitoService — Cognito Hosted UI token operations
+ * CognitoService — Cognito Hosted UI token operations.
  *
  * Handles:
  * - Building the Cognito Hosted UI login redirect URL
  * - Exchanging an authorization code for Cognito tokens
- * - Decoding Cognito id_token claims (without signature verification —
- *   HP API performs the verified JWKS check during JWT bearer exchange)
+ * - Decoding Cognito id_token claims (for display only — NOT signature-verified)
  */
 
-import type { CognitoTokens, CognitoClaims } from '../types';
+import type { CognitoTokens, CognitoClaims } from '@/types';
 
 export class CognitoService {
   constructor(
-    private readonly region: string,
-    private readonly userPoolId: string,
+    private readonly domain: string,
     private readonly clientId: string,
     private readonly clientSecret: string,
-    private readonly domain: string,
     private readonly callbackUrl: string,
   ) {}
 
   /**
    * Build the Cognito Hosted UI authorization URL.
-   * Redirect the user here to initiate login.
-   *
-   * Equivalent to:
-   *   https://<domain>/login?client_id=<id>&response_type=code&scope=openid+email&redirect_uri=<url>
+   * Redirect the browser here to initiate login.
    */
   buildLoginUrl(): string {
     const params = new URLSearchParams({
@@ -38,13 +32,10 @@ export class CognitoService {
   }
 
   /**
-   * Exchange an authorization code (from Cognito callback) for Cognito tokens.
-   *
+   * Exchange an authorization code from the Cognito callback for tokens.
    * Calls: POST https://<domain>/oauth2/token
    */
   async exchangeCode(code: string): Promise<CognitoTokens> {
-    const tokenEndpoint = `https://${this.domain}/oauth2/token`;
-
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       client_id: this.clientId,
@@ -62,26 +53,25 @@ export class CognitoService {
       headers['Authorization'] = `Basic ${credentials}`;
     }
 
-    const response = await fetch(tokenEndpoint, {
+    const res = await fetch(`https://${this.domain}/oauth2/token`, {
       method: 'POST',
       headers,
       body: body.toString(),
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Cognito token exchange failed (${response.status}): ${text}`);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Cognito token exchange failed (${res.status}): ${text}`);
     }
 
-    return response.json() as Promise<CognitoTokens>;
+    return res.json() as Promise<CognitoTokens>;
   }
 
   /**
-   * Decode the claims from a Cognito id_token without verifying the signature.
+   * Decode Cognito id_token claims without verifying the signature.
    *
-   * ⚠️ Do NOT use this for authorization decisions — the HP API performs the
-   *   verified JWKS check during the JWT bearer exchange. This is only for
-   *   reading claims to display in the UI.
+   * ⚠️ Only for display purposes. HP API does the verified JWKS check during
+   *    the JWT bearer exchange.
    */
   decodeIdToken(idToken: string): CognitoClaims | null {
     try {
@@ -94,4 +84,14 @@ export class CognitoService {
       return null;
     }
   }
+}
+
+/** Singleton — initialized once from config. */
+export function createCognitoService(): CognitoService {
+  return new CognitoService(
+    process.env.COGNITO_DOMAIN!,
+    process.env.COGNITO_CLIENT_ID!,
+    process.env.COGNITO_CLIENT_SECRET ?? '',
+    process.env.COGNITO_CALLBACK_URL!,
+  );
 }
