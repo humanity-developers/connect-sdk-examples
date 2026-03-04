@@ -1,10 +1,26 @@
-# Humanity Protocol Connect SDK Examples
+<p align="center">
+  <img src="https://cdn.humanity.org/humanity-protocol-logo-devs.png" width="576" alt="Humanity Protocol">
+</p>
 
-Official examples for integrating Humanity Protocol's identity verification into web applications.
+<h1 align="center">Connect SDK Examples</h1>
+
+<p align="center">
+  Official examples for integrating Humanity Protocol's identity verification into web applications.
+</p>
+
+<p align="center">
+  <a href="https://docs.humanity.org"><img src="https://img.shields.io/badge/docs-humanity.org-blue.svg" alt="Documentation"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"></a>
+  <a href="https://discord.gg/humanity"><img src="https://img.shields.io/badge/discord-join-7289da.svg" alt="Discord"></a>
+</p>
+
+<div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![SDK Version](https://img.shields.io/badge/Connect_SDK-v0.0.3-green.svg)](https://www.npmjs.com/package/@humanity-org/connect-sdk)
 [![Node](https://img.shields.io/badge/Node-18+-purple.svg)](https://nodejs.org)
+
+</div>
 
 ## Choose Your Example
 
