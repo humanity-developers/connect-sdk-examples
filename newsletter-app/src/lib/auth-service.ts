@@ -150,6 +150,10 @@ export class AuthService {
 
   /**
    * Verify all social account presets in a single batch request.
+   *
+   * A social preset is considered "connected" when the API returns status "valid"
+   * and a truthy value. The value may be a boolean `true`, a username string, or
+   * an email address — all of which indicate the account is linked.
    */
   private async verifySocialAccounts(accessToken: string): Promise<SocialAccount[]> {
     const socials: SocialAccount[] = [];
@@ -161,25 +165,53 @@ export class AuthService {
         presets: [...SOCIAL_PRESETS],
       });
 
-
       for (const preset of SOCIAL_PRESETS) {
         // SDK returns presetName in snake_case (matches our constants)
-        // and preset in camelCase - we match on presetName
+        // and preset (developerKey) in camelCase — match on presetName
         const result = batchResult.results?.find(
-          (r: any) => r.presetName === preset || r.preset === preset
+          (r) => r.presetName === preset
         );
-        const isConnected = result?.value === true;
+
+        // A preset is connected when:
+        //   status === 'valid'  — the API confirmed the account is linked
+        //   value is truthy     — may be boolean true, a username, or an email
+        //
+        // The SDK interface types `value` as boolean, but the Humanity API
+        // returns the linked account's username or email (a non-empty string)
+        // for individual social presets. We cast through `unknown` to handle
+        // both the typed interface and the runtime reality.
+        const rawValue = result?.value as unknown;
+        const isConnected =
+          result?.status === 'valid' &&
+          rawValue !== null &&
+          rawValue !== undefined &&
+          rawValue !== false &&
+          rawValue !== '';
+
         const provider = SOCIAL_PRESET_TO_PROVIDER[preset];
+        const username =
+          typeof rawValue === 'string' && rawValue.length > 0 ? rawValue : undefined;
 
         socials.push({
           provider: provider as SocialAccount['provider'],
           connected: isConnected,
-          username: undefined,
+          username,
           connectedAt: isConnected ? now : undefined,
         });
       }
-    } catch {
-      // Return empty socials on error
+
+      // Surface any preset-level errors for visibility during development
+      if (batchResult.errors?.length) {
+        console.warn(
+          '[auth-service] Social preset errors:',
+          batchResult.errors.map((e) => `${e.presetName}: ${e.error.error_description ?? e.error.error}`).join(', ')
+        );
+      }
+    } catch (err) {
+      // Log the error so it is visible in server logs rather than silently
+      // returning all accounts as disconnected (which triggers the gate).
+      console.error('[auth-service] verifySocialAccounts failed:', err instanceof Error ? err.message : err);
+
       for (const preset of SOCIAL_PRESETS) {
         const provider = SOCIAL_PRESET_TO_PROVIDER[preset];
         socials.push({

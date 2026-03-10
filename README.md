@@ -29,20 +29,23 @@
 | Learn basic OAuth 2.0 + PKCE flow | [next-oauth](./next-oauth) | ⭐ |
 | Issue my own JWTs from verified identity | [next-backend-auth](./next-backend-auth) | ⭐⭐ |
 | Build personalized experiences from presets | [newsletter-app](./newsletter-app) | ⭐⭐⭐ |
+| Already using AWS Cognito — skip the consent screen | [cognito-auth](./cognito-auth) | ⭐⭐ |
+| Already using AWS Cognito — skip the HP consent flow | [cognito-auth](./cognito-auth) | ⭐⭐ |
 
 ## Quick Comparison
 
-| Feature | next-oauth | next-backend-auth | newsletter-app |
-|---------|:----------:|:-----------------:|:--------------:|
-| OAuth 2.0 + PKCE | ✓ | ✓ | ✓ |
-| Token exchange & refresh | ✓ | ✓ | ✓ |
-| ID token verification | ✓ | ✓ | ✓ |
-| Backend JWT issuance | | ✓ | ✓ |
-| Preset verification (isHuman) | | ✓ | ✓ |
-| Social account detection | | | ✓ |
-| Query Engine integration | | | ✓ |
-| Database (MongoDB) | | | ✓ |
-| Debug tools | ✓ | ✓ | ✓ |
+| Feature | next-oauth | next-backend-auth | newsletter-app | cognito-auth |
+|---------|:----------:|:-----------------:|:--------------:|:------------:|
+| OAuth 2.0 + PKCE | ✓ | ✓ | ✓ | |
+| Token exchange & refresh | ✓ | ✓ | ✓ | ✓ |
+| ID token verification | ✓ | ✓ | ✓ | |
+| Backend JWT issuance | | ✓ | ✓ | |
+| Preset verification (isHuman) | | ✓ | ✓ | ✓ |
+| Social account detection | | | ✓ | |
+| Query Engine integration | | | ✓ | |
+| Database (MongoDB) | | | ✓ | |
+| Debug tools | ✓ | ✓ | ✓ | ✓ |
+| **AWS Cognito JWT bearer grant** | | | | **✓** |
 
 ## Prerequisites
 
